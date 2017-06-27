@@ -59,7 +59,6 @@ case object Kafka_0_10_2_1 extends KafkaVersion {
 object KafkaVersion {
   val supportedVersions: Map[String,KafkaVersion] = Map(
     "0.8.1.1" -> Kafka_0_8_1_1,
-    "0.8.2-beta" -> Kafka_0_8_2_0,
     "0.8.2.0" -> Kafka_0_8_2_0,
     "0.8.2.1" -> Kafka_0_8_2_1,
     "0.8.2.2" -> Kafka_0_8_2_2,
@@ -73,7 +72,12 @@ object KafkaVersion {
     "0.10.2.1" -> Kafka_0_10_2_1
   )
 
-  val formSelectList : IndexedSeq[(String,String)] = supportedVersions.toIndexedSeq.filterNot(_._1.contains("beta")).map(t => (t._1,t._2.toString))
+  val formSelectList : IndexedSeq[(String,String)] =
+    supportedVersions
+      .toIndexedSeq
+      .filterNot(_._1.contains("beta"))
+      .map(t => (t._1,t._2.toString))
+      .sortBy(t => t._1)
 
   def apply(s: String) : KafkaVersion = {
     supportedVersions.get(s) match {
@@ -265,10 +269,7 @@ case class ClusterTuning(brokerViewUpdatePeriodSeconds: Option[Int]
                          , kafkaAdminClientThreadPoolQueueSize: Option[Int]
                         )
 object ClusterTuning {
-  import scalaz.{Failure,Success}
-  import scalaz.syntax.applicative._
   import org.json4s._
-  import org.json4s.jackson.JsonMethods._
   import org.json4s.jackson.Serialization
   import org.json4s.scalaz.JsonScalaz._
   import scala.language.reflectiveCalls

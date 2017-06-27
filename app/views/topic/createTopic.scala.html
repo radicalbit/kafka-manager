@@ -25,8 +25,6 @@
                 @b3.text(createTopicForm("topic"), '_label -> "Topic", 'placeholder -> "", 'autofocus -> true )
                 @b3.text(createTopicForm("partitions"), '_label -> "Partitions", 'placeholder -> "8")
                 @b3.text(createTopicForm("replication"), '_label -> "Replication Factor", 'placeholder -> "3")
-                @b3.submit('class -> "submit-button btn btn-primary"){ Create }
-                <a href="@routes.Topic.topics(cluster)" class="cancel-button btn btn-default" role="button">Cancel</a>
             </td>
             <td>
                 @helper.repeat(createTopicForm("configs"), min = 1) { configsForm =>
@@ -37,6 +35,8 @@
         </tr>
         </tbody>
     </table>
+    @b3.submit('class -> "submit-button btn btn-primary"){ Create }
+    <a href="@routes.Topic.topics(cluster)" class="cancel-button btn btn-default" role="button">Cancel</a>
     }
 </div>
 }
@@ -45,7 +45,7 @@
     "Create Topic",
     menu = theMenu,
     breadcrumbs=views.html.navigation.breadCrumbs(models.navigation.BreadCrumbs.withViewAndCluster("Create Topic",cluster))) {
-    <div class="col-md-6 un-pad-me">
+    <div class="col-md-12 un-pad-me">
         <div class="panel panel-default">
             <div class="panel-heading"><h3><button type="button" class="btn btn-link" onclick="goBack()"><span class="glyphicon glyphicon-arrow-left" aria-hidden="true"></span></button>Create Topic</h3></div>
             @errorOrForm.fold( views.html.errors.onApiError(_), t => renderForm(t._1))
