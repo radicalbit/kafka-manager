@@ -13,7 +13,7 @@
                 <tbody>
                 @for(cluster <- clusters) {
                 <tr>
-                    <td>
+                    <td style="vertical-align:middle">
                         @if(cluster.enabled) {
                             <a href="@routes.Cluster.cluster(cluster.name)">@cluster.name</a>
                         } else {
@@ -51,9 +51,7 @@
                         }
                         </div>
                     </td>
-                    <td>
-                        @cluster.version.toString
-                    </td>
+                    <td style="vertical-align:middle">@cluster.version.toString</td>
                 </tr>
                 }
                 </tbody>
