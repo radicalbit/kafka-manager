@@ -75,7 +75,6 @@ object KafkaVersion {
   val formSelectList : IndexedSeq[(String,String)] =
     supportedVersions
       .toIndexedSeq
-      .filterNot(_._1.contains("beta"))
       .map(t => (t._1,t._2.toString))
       .sortBy(t => t._1)
 
@@ -92,20 +91,19 @@ object KafkaVersion {
 }
 
 object ClusterConfig {
-  val legalChars = "[a-zA-Z0-9\\._\\-]"
   private val maxNameLength = 255
-  val regex = new Regex(legalChars + "+")
+  val regex = new Regex("[a-zA-Z0-9\\._\\-]+")
 
   def validateName(clusterName: String) {
     require(clusterName.length > 0, "cluster name is illegal, can't be empty")
     require(!(clusterName.equals(".") || clusterName.equals("..")), "cluster name cannot be \".\" or \"..\"")
-    require(clusterName.length <= maxNameLength,"cluster name is illegal, can't be longer than " + maxNameLength + " characters")
+    require(clusterName.length <= maxNameLength, s"cluster name is illegal, can't be longer than $maxNameLength characters")
     regex.findFirstIn(clusterName) match {
       case Some(t) =>
         require(t.equals(clusterName),
-          ("cluster name " + clusterName + " is illegal, contains a character other than ASCII alphanumerics, '.', '_' and '-'"))
+          s"cluster name $clusterName is illegal, contains a character other than ASCII alphanumerics, '.', '_' and '-'")
       case None =>
-        require(false,"cluster name " + clusterName + " is illegal,  contains a character other than ASCII alphanumerics, '.', '_' and '-'")
+        require(false, s"cluster name $clusterName is illegal,  contains a character other than ASCII alphanumerics, '.', '_' and '-'")
     }
   }
 
