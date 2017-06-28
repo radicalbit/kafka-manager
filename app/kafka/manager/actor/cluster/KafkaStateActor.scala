@@ -403,7 +403,7 @@ trait OffsetCache extends Logging {
     }
 
     def getSimpleConsumer(bi: BrokerIdentity) =
-      new SimpleConsumer(bi.host, bi.port, getSimpleConsumerSocketTimeoutMillis, 256 * 1024, clientId)
+      new SimpleConsumer(bi.host, bi.port, getSimpleConsumerSocketTimeoutMillis, simpleConsumerBufferSize, clientId)
 
     // Get the latest offset for each partition
     val futureMap: Future[PartitionOffsetsCapture] = {
