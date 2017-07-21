@@ -36,7 +36,7 @@ import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsum
 import org.joda.time.{DateTime, DateTimeZone}
 
 import scala.collection.concurrent.TrieMap
-import scala.collection.{JavaConverters, mutable}
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 

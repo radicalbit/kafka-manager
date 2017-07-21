@@ -7,26 +7,26 @@ package controllers
 
 import java.util.Properties
 
-import features.{KMTopicManagerFeature, ApplicationFeatures}
-import kafka.manager.model._
-import ActorModel.TopicIdentity
-import kafka.manager.features.ClusterFeatures
-import kafka.manager.utils.TopicConfigs
+import features.{ApplicationFeatures, KMTopicManagerFeature}
 import kafka.manager.ApiError
+import kafka.manager.features.ClusterFeatures
+import kafka.manager.model.ActorModel.TopicIdentity
+import kafka.manager.model._
+import kafka.manager.utils.TopicConfigs
 import models.FollowLink
-import models.form.ReassignPartitionOperation.{RunAssignment, ForceRunAssignment}
+import models.form.ReassignPartitionOperation.{ForceRunAssignment, RunAssignment}
 import models.form._
 import models.navigation.Menus
 import play.api.data.Form
 import play.api.data.Forms._
-import play.api.data.validation.{Valid, Invalid, Constraint}
 import play.api.data.validation.Constraints._
+import play.api.data.validation.{Constraint, Invalid, Valid}
 import play.api.i18n.{I18nSupport, MessagesApi}
 import play.api.mvc._
 
 import scala.concurrent.Future
-import scala.util.{Success, Failure, Try}
-import scalaz.{\/-, -\/}
+import scala.util.{Failure, Success, Try}
+import scalaz.-\/
 
 /**
  * @author hiral

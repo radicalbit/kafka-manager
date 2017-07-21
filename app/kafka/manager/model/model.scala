@@ -160,12 +160,13 @@ object ClusterConfig {
     )
   }
 
-  import scalaz.{Failure,Success}
   import scalaz.syntax.applicative._
+  import scalaz.{Failure, Success}
   import org.json4s._
   import org.json4s.jackson.JsonMethods._
   import org.json4s.jackson.Serialization
   import org.json4s.scalaz.JsonScalaz._
+
   import scala.language.reflectiveCalls
 
   implicit val formats = Serialization.formats(FullTypeHints(List(classOf[ClusterConfig])))
@@ -270,6 +271,7 @@ object ClusterTuning {
   import org.json4s._
   import org.json4s.jackson.Serialization
   import org.json4s.scalaz.JsonScalaz._
+
   import scala.language.reflectiveCalls
 
   implicit val formats = Serialization.formats(FullTypeHints(List(classOf[ClusterTuning])))
