@@ -72,11 +72,7 @@ object KafkaVersion {
     "0.10.2.1" -> Kafka_0_10_2_1
   )
 
-  val formSelectList : IndexedSeq[(String,String)] =
-    supportedVersions
-      .toIndexedSeq
-      .map(t => (t._1,t._2.toString))
-      .sortBy(t => t._1)
+  val formSelectList : IndexedSeq[(String,String)] = supportedVersions.toIndexedSeq.filterNot(_._1.contains("beta")).map(t => (t._1,t._2.toString)).sortWith((a, b) => sortVersion(a._1, b._1))
 
   def apply(s: String) : KafkaVersion = {
     supportedVersions.get(s) match {
@@ -87,6 +83,20 @@ object KafkaVersion {
 
   def unapply(v: KafkaVersion) : Option[String] = {
     Some(v.toString)
+  }
+
+  private def sortVersion(versionNum: String, kafkaVersion: String): Boolean = {
+    val separator = "\\."
+    val versionNumList = versionNum.split(separator, -1).toList
+    val kafkaVersionList = kafkaVersion.split(separator, -1).toList
+    def compare(a: List[String], b: List[String]): Boolean = a.nonEmpty match {
+      case true if b.nonEmpty =>
+        if (a.head == b.head) compare(a.tail, b.tail) else a.head.toInt < b.head.toInt
+      case true if b.isEmpty => false
+      case false if b.nonEmpty => true
+      case _ => true
+    }
+    compare(versionNumList, kafkaVersionList)
   }
 }
 
@@ -125,6 +135,7 @@ object ClusterConfig {
             , activeOffsetCacheEnabled: Boolean = false
             , displaySizeEnabled: Boolean = false
             , tuning: Option[ClusterTuning]
+            , securityProtocol: String
            ) : ClusterConfig = {
     val kafkaVersion = KafkaVersion(version)
     //validate cluster name
@@ -147,15 +158,16 @@ object ClusterConfig {
       , activeOffsetCacheEnabled
       , displaySizeEnabled
       , tuning
+      , SecurityProtocol(securityProtocol)
     )
   }
 
   def customUnapply(cc: ClusterConfig) : Option[(
-    String, String, String, Int, Boolean, Option[String], Option[String], Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Option[ClusterTuning])] = {
+    String, String, String, Int, Boolean, Option[String], Option[String], Boolean, Boolean, Boolean, Boolean, Boolean, Boolean, Option[ClusterTuning], String)] = {
     Some((
       cc.name, cc.version.toString, cc.curatorConfig.zkConnect, cc.curatorConfig.zkMaxRetry,
       cc.jmxEnabled, cc.jmxUser, cc.jmxPass, cc.jmxSsl, cc.pollConsumers, cc.filterConsumers,
-      cc.logkafkaEnabled, cc.activeOffsetCacheEnabled, cc.displaySizeEnabled, cc.tuning
+      cc.logkafkaEnabled, cc.activeOffsetCacheEnabled, cc.displaySizeEnabled, cc.tuning, cc.securityProtocol.stringId
       )
     )
   }
@@ -198,6 +210,7 @@ object ClusterConfig {
       :: ("activeOffsetCacheEnabled" -> toJSON(config.activeOffsetCacheEnabled))
       :: ("displaySizeEnabled" -> toJSON(config.displaySizeEnabled))
       :: ("tuning" -> toJSON(config.tuning))
+      :: ("securityProtocol" -> toJSON(config.securityProtocol.stringId))
       :: Nil)
     compact(render(json)).getBytes(StandardCharsets.UTF_8)
   }
@@ -221,6 +234,8 @@ object ClusterConfig {
           val activeOffsetCacheEnabled = fieldExtended[Boolean]("activeOffsetCacheEnabled")(json)
           val displaySizeEnabled = fieldExtended[Boolean]("displaySizeEnabled")(json)
           val clusterTuning = fieldExtended[Option[ClusterTuning]]("tuning")(json)
+          val securityProtocolString = fieldExtended[String]("securityProtocol")(json)
+          val securityProtocol = securityProtocolString.map(SecurityProtocol.apply).getOrElse(PLAINTEXT)
 
           ClusterConfig.apply(
             name,
@@ -235,7 +250,8 @@ object ClusterConfig {
             logkafkaEnabled.getOrElse(false),
             activeOffsetCacheEnabled.getOrElse(false),
             displaySizeEnabled.getOrElse(false),
-            clusterTuning.getOrElse(None)
+            clusterTuning.getOrElse(None),
+            securityProtocol
           )
       }
 
@@ -353,4 +369,37 @@ case class ClusterConfig (name: String
                           , activeOffsetCacheEnabled: Boolean
                           , displaySizeEnabled: Boolean
                           , tuning: Option[ClusterTuning]
+                          , securityProtocol: SecurityProtocol
                          )
+
+sealed trait SecurityProtocol {
+  def stringId: String
+  def secure: Boolean
+}
+case object SASL_PLAINTEXT extends SecurityProtocol {
+  val stringId = "SASL_PLAINTEXT"
+  val secure = true
+}
+case object SASL_SSL extends SecurityProtocol {
+  val stringId = "SASL_SSL"
+  val secure = true
+}
+case object SSL extends SecurityProtocol {
+  val stringId = "SSL"
+  val secure = true
+}
+case object PLAINTEXT extends SecurityProtocol {
+  val stringId = "PLAINTEXT"
+  val secure = false
+}
+object SecurityProtocol {
+  private[this] val typesMap: Map[String, SecurityProtocol] = Map(
+    SASL_PLAINTEXT.stringId -> SASL_PLAINTEXT
+    , SASL_SSL.stringId -> SASL_SSL
+    , SSL.stringId -> SSL
+    , PLAINTEXT.stringId -> PLAINTEXT
+  )
+
+  val formSelectList : IndexedSeq[(String,String)] = typesMap.toIndexedSeq.map(t => (t._1,t._2.stringId))
+  def apply(s: String) : SecurityProtocol = typesMap(s.toUpperCase)
+}

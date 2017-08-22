@@ -32,6 +32,7 @@ import kafka.manager.utils.zero90.{GroupMetadata, MemberMetadata}
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.recipes.cache.PathChildrenCache.StartMode
 import org.apache.curator.framework.recipes.cache._
+import org.apache.kafka.clients.CommonClientConfigs
 import org.apache.kafka.clients.consumer.{Consumer, ConsumerRecords, KafkaConsumer}
 import org.joda.time.{DateTime, DateTimeZone}
 
@@ -47,7 +48,7 @@ import kafka.manager.utils._
 
 import scala.collection.JavaConverters._
 
-case class KafkaAdminClientActorConfig(clusterContext: ClusterContext, longRunningPoolConfig: LongRunningPoolConfig, kafkaStateActorPath: ActorPath)
+case class KafkaAdminClientActorConfig(clusterContext: ClusterContext, longRunningPoolConfig: LongRunningPoolConfig, kafkaStateActorPath: ActorPath, consumerProperties: Option[Properties])
 case class KafkaAdminClientActor(config: KafkaAdminClientActorConfig) extends BaseClusterQueryActor with LongRunningPoolActor {
 
   private[this] var adminClientOption : Option[AdminClient] = None
@@ -81,10 +82,19 @@ case class KafkaAdminClientActor(config: KafkaAdminClientActorConfig) extends Ba
 
   private def createAdminClient(bl: BrokerList): AdminClient = {
     val targetBrokers : IndexedSeq[BrokerIdentity] = bl.list
-    var brokerListStr: String = targetBrokers.map(b => s"${b.host}:${b.port}").mkString(",")
-
-    log.info(s"Creating admin client with broker list : $brokerListStr")
-    AdminClient.createSimplePlaintext(brokerListStr)
+    val brokerListStr: String = targetBrokers.map {
+      b =>
+        val port = b.endpoints(config.clusterContext.config.securityProtocol)
+        s"${b.host}:$port"
+    }.mkString(",")
+    val props = new Properties()
+    config.consumerProperties.foreach {
+      cp => props.putAll(cp)
+    }
+    props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, config.clusterContext.config.securityProtocol.stringId)
+    props.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, brokerListStr)
+    log.info(s"Creating admin client with security protocol=${config.clusterContext.config.securityProtocol.stringId} , broker list : $brokerListStr")
+    AdminClient.create(props)
   }
 
   override def processQueryRequest(request: QueryRequest): Unit = {
@@ -185,9 +195,14 @@ case class KafkaManagedOffsetCache(clusterContext: ClusterContext
 
   private[this] def createKafkaConsumer(): Consumer[Array[Byte], Array[Byte]] = {
     val hostname = InetAddress.getLocalHost.getHostName
+    val brokerListStr: String = bootstrapBrokerList.list.map {
+      b =>
+        val port = b.endpoints(clusterContext.config.securityProtocol)
+        s"${b.host}:$port"
+    }.mkString(",")
     val props: Properties = new Properties()
     props.put(org.apache.kafka.clients.consumer.ConsumerConfig.GROUP_ID_CONFIG, s"KMOffsetCache-$hostname")
-    props.put(org.apache.kafka.clients.consumer.ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapBrokerList.list.map(bi => s"${bi.host}:${bi.port}").mkString(","))
+    props.put(org.apache.kafka.clients.consumer.ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerListStr)
     props.put(org.apache.kafka.clients.consumer.ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG, "false")
     props.put(org.apache.kafka.clients.consumer.ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false")
     props.put(org.apache.kafka.clients.consumer.ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, "org.apache.kafka.common.serialization.ByteArrayDeserializer")
@@ -196,6 +211,7 @@ case class KafkaManagedOffsetCache(clusterContext: ClusterContext
     consumerProperties.foreach {
       cp => props.putAll(cp)
     }
+    props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, clusterContext.config.securityProtocol.stringId)
     Try {
       info("Constructing new kafka consumer client using these properties: ")
       props.asScala.foreach {
@@ -402,8 +418,11 @@ trait OffsetCache extends Logging {
       }.groupBy(_._1)
     }
 
-    def getSimpleConsumer(bi: BrokerIdentity) =
-      new SimpleConsumer(bi.host, bi.port, getSimpleConsumerSocketTimeoutMillis, simpleConsumerBufferSize, clientId)
+    def getSimpleConsumer(bi: BrokerIdentity) = {
+      require(bi.nonSecure, "Cannot fetch log size without PLAINTEXT endpoint!")
+      val port: Int = bi.endpoints(PLAINTEXT)
+      new SimpleConsumer(bi.host, port, getSimpleConsumerSocketTimeoutMillis, simpleConsumerBufferSize, clientId)
+    }
 
     // Get the latest offset for each partition
     val futureMap: Future[PartitionOffsetsCapture] = {
@@ -472,7 +491,7 @@ trait OffsetCache extends Logging {
 
   private[this] var kafkaManagedOffsetCache : Option[KafkaManagedOffsetCache] = None
 
-  private[this] lazy val secureKafka = getBrokerList().list.exists(_.secure)
+  private[this] lazy val hasNonSecureEndpoint = getBrokerList().list.exists(_.nonSecure)
 
   def start() : Unit = {
     if(KafkaManagedOffsetCache.isSupported(clusterContext.config.version)) {
@@ -500,7 +519,7 @@ trait OffsetCache extends Logging {
   }
 
   def getTopicPartitionOffsets(topic: String, interactive: Boolean) : Future[PartitionOffsetsCapture] = {
-    if((interactive || loadOffsets) && !secureKafka) {
+    if((interactive || loadOffsets) && hasNonSecureEndpoint) {
       partitionOffsetsCache.get(topic)
     } else {
       emptyPartitionOffsetsCapture
@@ -871,7 +890,8 @@ class KafkaStateActor(config: KafkaStateActorConfig) extends BaseClusterQueryCom
   private[this] val kaConfig = KafkaAdminClientActorConfig(
     clusterContext,
     config.kafkaAdminClientPoolConfig,
-    self.path
+    self.path,
+    config.consumerProperties
   )
   private[this] val kaProps = Props(classOf[KafkaAdminClientActor],kaConfig)
   private[this] val kafkaAdminClientActor : ActorPath = context.actorOf(kaProps.withDispatcher(config.pinnedDispatcherName),"kafka-admin-client").path
