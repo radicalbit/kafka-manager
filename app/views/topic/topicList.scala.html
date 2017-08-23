@@ -43,21 +43,6 @@
     breadcrumbs=views.html.navigation.breadCrumbs(models.navigation.BreadCrumbs.withViewAndCluster("Topics",cluster)),
     scripts=topicScripts) {
     <div class="col-md-12">
-        @features.app(features.KMTopicManagerFeature) {
-        <div class="panel panel-default">
-            <div class="panel-heading"><h4>Operations</h4></div>
-            <table class="table">
-                <tr>
-                    <td>
-                        <a href="@routes.Topic.addPartitionsToMultipleTopics(cluster)" class="submit-button btn btn-primary" role="button">Add Partitions</a>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-        }
-    </div>
-    <div class="col-md-12">
         <div class="panel panel-default">
             <div class="panel-heading"><h3>Topics</h3></div>
             @errorOrTopics.fold( 
