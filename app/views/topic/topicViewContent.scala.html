@@ -209,24 +209,6 @@
                     }
                     @features.app(features.KMReassignPartitionsFeature) {
                     <td>
-                        @b3.form(routes.ReassignPartitions.handleOperation(cluster,topic)) {
-                            @reassignPartitionOperation match {
-                                case ForceRunAssignment => {
-                                    <fieldset>
-                                        <input type="hidden" name="operation" value="force">
-                                        <input type="hidden" name="brokers" value="@Seq()">
-                                        @b3.submit('class -> "btn btn-primary btn-block"){ Force Reassign Partitions }
-                                    </fieldset>
-                                }
-                                case _ => {
-                                    <fieldset>
-                                        <input type="hidden" name="operation" value="run">
-                                        <input type="hidden" name="brokers" value="@Seq()">
-                                        @b3.submit('class -> "btn btn-primary btn-block"){ Reassign Partitions }
-                                    </fieldset>
-                                }
-                            }
-                        }
                     </td>
                     <td>
                         <a href="@routes.ReassignPartitions.confirmAssignment(cluster,topic)" class="submit-button btn btn-primary" role="button">Generate Partition Assignments</a>
