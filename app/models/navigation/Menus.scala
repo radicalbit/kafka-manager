@@ -72,7 +72,6 @@ class Menus(implicit applicationFeatures: ApplicationFeatures) {
       clusterMenu(cluster),
       brokersMenu(cluster),
       topicMenu(cluster),
-      reassignPartitionsMenu(cluster),
       consumersMenu(cluster),
       logKafkaMenu(cluster, clusterFeatures)
     ).flatten
