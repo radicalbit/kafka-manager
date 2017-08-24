@@ -209,40 +209,7 @@
                     }
                     @features.app(features.KMReassignPartitionsFeature) {
                     <td>
-                        @b3.form(routes.ReassignPartitions.handleOperation(cluster,topic)) {
-                            @reassignPartitionOperation match {
-                                case ForceRunAssignment => {
-                                    <fieldset>
-                                        <input type="hidden" name="operation" value="force">
-                                        <input type="hidden" name="brokers" value="@Seq()">
-                                        @b3.submit('class -> "btn btn-primary btn-block"){ Force Reassign Partitions }
-                                    </fieldset>
-                                }
-                                case _ => {
-                                    <fieldset>
-                                        <input type="hidden" name="operation" value="run">
-                                        <input type="hidden" name="brokers" value="@Seq()">
-                                        @b3.submit('class -> "btn btn-primary btn-block"){ Reassign Partitions }
-                                    </fieldset>
-                                }
-                            }
-                        }
-                    </td>
-                    <td>
-                        <a href="@routes.ReassignPartitions.confirmAssignment(cluster,topic)" class="submit-button btn btn-primary" role="button">Generate Partition Assignments</a>
-                    </td>
-                    }
-                </tr>
-                <tr>
-                    <td>
-                        <a href="@routes.Topic.addPartitions(cluster,topic)" class="submit-button btn btn-primary" role="button">Add Partitions</a>
-                    </td>
-                    <td>
                         <a href="@routes.Topic.updateConfig(cluster,topic)" class="submit-button btn btn-primary" role="button">Update Config</a>
-                    </td>
-                    @features.app(features.KMReassignPartitionsFeature) {
-                    <td>
-                        <a href="@routes.ReassignPartitions.manualAssignments(cluster, topic)" class="submit-button btn btn-primary" role="button">Manual Partition Assignments</a>
                     </td>
                     }
                 </tr>
