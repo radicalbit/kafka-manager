@@ -5,16 +5,18 @@
 
 package loader
 
-import controllers.KafkaManagerContext
+import controllers.{BasicAuthenticationFilter, KafkaManagerContext}
 import features.ApplicationFeatures
 import models.navigation.Menus
-import play.api.ApplicationLoader
 import play.api.ApplicationLoader.Context
-import play.api.BuiltInComponentsFromContext
+import play.api.db.evolutions.{DynamicEvolutions, EvolutionsComponents}
+import play.api.db.slick.evolutions.SlickEvolutionsComponents
 import play.api.i18n.I18nComponents
 import play.api.routing.Router
+import play.api.{ApplicationLoader, BuiltInComponentsFromContext}
 import router.Routes
-import controllers.BasicAuthenticationFilter
+import play.api.db.slick.{DbName, SlickComponents}
+import slick.driver.JdbcProfile
 
 
 /**
@@ -26,7 +28,8 @@ class KafkaManagerLoader extends ApplicationLoader {
   }
 }
 
-class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context) with I18nComponents {
+class ApplicationComponents(context: Context) extends BuiltInComponentsFromContext(context)
+  with I18nComponents with DatabaseComponents {
   private[this] implicit val applicationFeatures = ApplicationFeatures.getApplicationFeatures(context.initialConfiguration.underlying)
   private[this] implicit val menus = new Menus
   private[this] val kafkaManagerContext = new KafkaManagerContext(applicationLifecycle, context.initialConfiguration)
@@ -42,22 +45,32 @@ class ApplicationComponents(context: Context) extends BuiltInComponentsFromConte
   private[this] lazy val webJarsAssetsC = new controllers.WebJarAssets(httpErrorHandler, context.initialConfiguration, context.environment)
   private[this] lazy val apiHealthC = new controllers.ApiHealth(messagesApi)
 
-
   override lazy val httpFilters = Seq(BasicAuthenticationFilter(context.initialConfiguration))
 
-
   override val router: Router = new Routes(
-    httpErrorHandler, 
-    applicationC, 
-    clusterC, 
-    topicC, 
-    logKafkaC, 
-    consumerC, 
+    httpErrorHandler,
+    applicationC,
+    clusterC,
+    topicC,
+    logKafkaC,
+    consumerC,
     preferredReplicaElectionC,
-    reassignPartitionsC, 
-    kafkaStateCheckC, 
+    reassignPartitionsC,
+    kafkaStateCheckC,
     assetsC,
     webJarsAssetsC,
     apiHealthC
   ).withPrefix(context.initialConfiguration.getString("play.http.context").orNull)
 }
+
+trait DatabaseComponents extends SlickComponents with SlickEvolutionsComponents with EvolutionsComponents {
+
+  lazy val dbConf = api.dbConfig[JdbcProfile](DbName("default"))
+
+  val dynamicEvolutions: DynamicEvolutions = new DynamicEvolutions
+  private[this] def init() = {
+    applicationEvolutions
+  }
+  init()
+}
+
